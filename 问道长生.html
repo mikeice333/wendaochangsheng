@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>问道长生</title>
+<style>
+:root{
+  --bg:#f5f0e8;--paper:#2a2018;--paper-dim:#8a8070;
+  --ink:#c45a3c;--ink-dim:rgba(196,90,60,0.12);--ink-glow:rgba(196,90,60,0.04);
+  --jade:#5a7a5a;--gold:#8a6a20;
+  --font-cn:'STKaiti','KaiTi','楷体','SimSun',serif;
+  --font-num:'SimSun','STSong','宋体',serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--paper);font-family:var(--font-cn);font-size:18px;line-height:1.8;display:flex;flex-direction:column;overflow:hidden;user-select:none;height:100vh}
+#start-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center}
+#start-overlay.hidden{display:none}
+.start-title{font-size:48px;color:var(--paper);letter-spacing:8px;margin-bottom:4px}
+.start-sub{font-size:16px;color:var(--paper-dim);letter-spacing:4px;margin-bottom:48px}
+.btn{display:block;width:200px;margin:8px auto;padding:12px 0;font-family:var(--font-cn);font-size:18px;color:var(--paper);background:var(--ink-dim);border:1px solid rgba(196,90,60,0.2);border-radius:4px;cursor:pointer;text-align:center;letter-spacing:3px;transition:all 0.2s}
+.btn:hover{background:rgba(196,90,60,0.15);border-color:var(--ink)}
+.btn.sm{display:inline-block;width:auto;padding:6px 16px;font-size:15px;margin:3px;letter-spacing:1px}
+.btn.danger{color:rgba(196,90,60,0.5);border-color:rgba(196,90,60,0.1)}
+.btn.danger:hover{color:var(--ink);border-color:var(--ink)}
+.btn.dim{opacity:0.3;pointer-events:none}
+#start-delete{position:absolute;bottom:20px;right:24px;font-size:13px;color:rgba(196,90,60,0.2);cursor:pointer;transition:color 0.3s}
+#start-delete:hover{color:var(--ink)}
+
+.nav{display:none;justify-content:center;gap:0;padding:14px 16px 0;border-bottom:1px solid rgba(196,90,60,0.1);flex-shrink:0;background:var(--bg)}
+.nav.show{display:flex}
+.nav-btn{font-family:var(--font-cn);font-size:18px;color:var(--paper-dim);background:none;border:none;padding:8px 20px 10px;cursor:pointer;letter-spacing:3px;position:relative;transition:color 0.3s}
+.nav-btn:hover{color:var(--ink)}.nav-btn.active{color:var(--ink)}
+.nav-btn.active::after{content:'';position:absolute;bottom:0;left:20%;right:20%;height:2px;background:var(--ink);border-radius:1px}
+
+.page-wrap{display:none;flex:1;overflow-y:auto;padding:16px 24px 40px;background:var(--bg)}
+.page-wrap.show{display:block}
+.page{display:none;max-width:600px;margin:0 auto}
+.page.active{display:block}
+
+.section{border:1px solid rgba(196,90,60,0.08);border-radius:6px;padding:14px 16px;margin:12px 0;background:rgba(255,255,255,0.4)}
+.section-title{font-size:14px;color:var(--ink);letter-spacing:3px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(196,90,60,0.06)}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px}
+.stat-grid .sg{display:flex;justify-content:space-between;font-size:15px}
+.stat-grid .sg .sl{color:var(--paper-dim)}.stat-grid .sg .sv{color:var(--paper);font-family:var(--font-num)}
+.cult-header{display:flex;justify-content:space-between;padding:6px 0 12px;border-bottom:1px solid rgba(196,90,60,0.05);margin-bottom:14px}
+.cult-header .chl{font-size:14px;color:var(--paper-dim);letter-spacing:1px}
+.cult-header .chv{font-size:24px;color:var(--paper)}.cult-header .chv.sl{color:var(--ink)}
+.cult-header .ch-l{text-align:left}.cult-header .ch-r{text-align:right}
+.realm-display{text-align:center;padding:10px 0 6px;font-size:22px;color:var(--paper);letter-spacing:3px}
+.realm-display .stage{font-size:15px;color:var(--paper-dim);margin-top:2px}
+.progress-wrap{margin:10px 0}
+.progress-label{display:flex;justify-content:space-between;font-size:13px;color:var(--paper-dim);margin-bottom:4px}
+.progress-track{height:5px;background:rgba(0,0,0,0.04);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:var(--ink);border-radius:3px;transition:width 0.4s}
+.break-btn{text-align:center;margin:14px 0}
+.warn-text{text-align:center;font-size:13px;color:var(--gold);margin:6px 0;letter-spacing:1px}
+.equip-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:15px;border-bottom:1px solid rgba(196,90,60,0.03)}
+.equip-row .en{color:var(--paper)}.equip-row .ev{color:var(--paper-dim);font-family:var(--font-num);font-size:13px}
+.equip-row .es{font-size:13px;color:var(--paper-dim)}.equip-row .es.empty{color:rgba(138,128,112,0.2)}
+.equip-row .es.act{color:var(--ink);cursor:pointer}
+
+.floor-header{text-align:center;padding:6px 0}
+.floor-header .fh{font-size:24px;color:var(--paper);letter-spacing:3px}
+.floor-header .fs{font-size:14px;color:var(--paper-dim);margin-top:2px}
+.battle-area{display:flex;gap:14px;margin:14px 0}
+.battle-col{flex:1;border:1px solid rgba(196,90,60,0.08);border-radius:6px;padding:12px;text-align:center;background:rgba(255,255,255,0.4)}
+.battle-col .bc-title{font-size:16px;color:var(--ink);letter-spacing:2px;margin-bottom:8px}
+.battle-col .hp-bar{height:8px;background:rgba(0,0,0,0.04);border-radius:4px;overflow:hidden;margin:6px 0}
+.battle-col .hp-fill{height:100%;background:var(--jade);border-radius:4px}
+.battle-col .hp-text{font-size:13px;color:var(--paper-dim);font-family:var(--font-num)}
+.battle-col .bs{font-size:13px;color:var(--paper-dim);margin-top:4px;line-height:1.6}
+.combat-log{border:1px solid rgba(196,90,60,0.06);border-radius:6px;padding:12px 14px;max-height:180px;overflow-y:auto;font-size:14px;line-height:1.7;color:var(--paper-dim);background:rgba(255,255,255,0.3)}
+.combat-log .cl-hit{color:var(--paper)}.combat-log .cl-crit{color:var(--gold)}
+.combat-log .cl-dodge{color:var(--jade)}.combat-log .cl-reward{color:var(--ink)}
+.combat-log .cl-dead{color:rgba(196,90,60,0.4)}
+.action-row{display:flex;justify-content:center;gap:12px;margin-top:14px}
+
+.shop-tabs,.equip-tabs{display:flex;gap:0;margin-bottom:14px;border-bottom:1px solid rgba(196,90,60,0.06)}
+.shop-tab,.equip-tab{font-family:var(--font-cn);font-size:17px;color:var(--paper-dim);background:none;border:none;padding:8px 20px;cursor:pointer;letter-spacing:2px;transition:color 0.3s}
+.shop-tab.active,.equip-tab.active{color:var(--ink);border-bottom:2px solid var(--ink);margin-bottom:-1px}
+.shop-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(196,90,60,0.03);font-size:15px}
+.shop-item .si-name{color:var(--paper);flex:1}
+.shop-item .si-info{color:var(--paper-dim);font-family:var(--font-num);margin-right:10px;font-size:13px}
+.shop-item .si-cost{font-family:var(--font-num);font-size:13px;padding:3px 10px;border:1px solid var(--ink-dim);border-radius:3px;color:var(--ink);cursor:pointer;white-space:nowrap}
+.refresh-btn{text-align:center;margin-top:12px}
+.info-card{border:1px solid rgba(196,90,60,0.08);border-radius:6px;padding:16px;text-align:center;margin:14px 0;background:rgba(255,255,255,0.4)}
+.info-card .ic-title{font-size:20px;color:var(--ink);letter-spacing:3px;margin-bottom:8px}
+.info-card .ic-text{font-size:15px;color:var(--paper-dim);line-height:1.8}
+.menu-list{display:flex;flex-direction:column;gap:10px;margin:20px 0}
+
+.overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(245,240,232,0.92);z-index:100;display:none;align-items:center;justify-content:center}
+.overlay.show{display:flex}
+.dialog{background:var(--bg);border:1px solid var(--ink-dim);border-radius:8px;padding:24px 28px;min-width:340px;max-width:440px;max-height:75vh;overflow-y:auto;box-shadow:0 4px 24px rgba(0,0,0,0.06)}
+.dialog-title{font-size:22px;color:var(--ink);text-align:center;margin-bottom:14px;letter-spacing:4px}
+.save-slot{border:1px solid rgba(196,90,60,0.1);border-radius:6px;padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:all 0.2s;background:rgba(255,255,255,0.4)}
+.save-slot:hover{border-color:var(--ink);background:var(--ink-glow)}
+.save-slot .sl-name{font-size:16px;color:var(--paper)}
+.save-slot .sl-info{font-size:12px;color:var(--paper-dim);font-family:var(--font-num);margin-top:2px;line-height:1.6}
+.save-slot .sl-empty{font-size:14px;color:rgba(138,128,112,0.2)}
+.toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:18px;color:var(--paper);pointer-events:none;z-index:200;background:var(--bg);border:1px solid var(--ink-dim);border-radius:6px;padding:10px 24px;box-shadow:0 4px 16px rgba(0,0,0,0.08);animation:toast-in 2s ease-out forwards}
+@keyframes toast-in{0%{opacity:0;transform:translate(-50%,-50%) scale(0.8)}10%{opacity:1;transform:translate(-50%,-50%) scale(1)}70%{opacity:1}100%{opacity:0}}
+
+.name-input{width:160px;font-family:var(--font-cn);font-size:22px;color:var(--ink);background:rgba(196,90,60,0.04);border:1px solid var(--ink-dim);border-radius:4px;padding:6px 12px;text-align:center;outline:none}
+.name-input:focus{border-color:var(--ink)}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(196,90,60,0.1);border-radius:2px}
+#ov-story{background:var(--bg);z-index:60;flex-direction:column}
+#ov-story .st{font-size:22px;color:var(--paper);line-height:2.2;min-height:160px;text-align:center;max-width:400px;padding:0 20px}
+input,select{background:rgba(255,255,255,0.6);border:1px solid var(--ink-dim);color:var(--paper);padding:2px 6px;font-size:14px;border-radius:3px}
+</style>
+</head>
+<body>
+
+<div id="start-overlay">
+  <div class="start-title">问道长生</div>
+  <div class="start-sub">— 文字修仙放置 —</div>
+  <button class="btn" onclick="startStory()">开 始 游 戏</button>
+  <button class="btn" onclick="openSaveDialog('load')">读 取 存 档</button>
+  <div id="start-delete" onclick="deleteSaves()">删除存档</div>
+</div>
+
+<div class="overlay" id="ov-story"><div class="st" id="story-text"></div><div id="story-action" style="margin-top:30px;text-align:center"></div></div>
+
+<div class="nav" id="main-nav">
+  <button class="nav-btn active" data-page="cultivation">修炼</button>
+  <button class="nav-btn" data-page="abyss">炼魔渊</button>
+  <button class="nav-btn" data-page="shop">万宝阁</button>
+  <button class="nav-btn" data-page="equip">装备</button>
+  <button class="nav-btn" data-page="rebirth">轮回</button>
+  <button class="nav-btn" data-page="menu">菜单</button>
+  <button class="nav-btn" data-page="debug" style="display:none" id="nav-debug">调试</button>
+</div>
+
+<div class="page-wrap" id="page-wrap">
+<div class="page active" id="page-cultivation">
+  <div class="cult-header">
+    <div class="ch-l"><div class="chl" id="cu-name"></div><div class="chl" id="cu-gold"></div></div>
+    <div class="ch-r"><div class="chl" id="cu-title"></div><div class="chl" id="cu-pts"></div></div>
+  </div>
+  <div class="realm-display" id="cu-realm"></div>
+  <div class="progress-wrap"><div class="progress-label"><span>修为积累</span><span style="font-family:var(--font-num)" id="cu-progress-text"></span></div><div class="progress-track"><div class="progress-fill" id="cu-bar"></div></div><div style="text-align:right;font-size:12px;color:var(--paper-dim);margin-top:3px">速率：<span style="font-family:var(--font-num);color:var(--ink)" id="cu-rate"></span>/秒</div></div>
+  <div class="break-btn" id="cu-break-area"></div>
+  <div class="warn-text" id="cu-warn"></div>
+  <div class="section"><div class="section-title">属 性</div><div class="stat-grid" id="cu-stats"></div></div>
+  <div class="section"><div class="section-title">装备功法</div><div id="cu-techs"></div></div>
+  <div class="section"><div class="section-title">装备法宝</div><div id="cu-arts"></div></div>
+</div>
+<div class="page" id="page-abyss">
+  <div class="floor-header"><div class="fh" id="ab-title">炼 魔 渊</div><div class="fs" id="ab-floor"></div></div>
+  <div class="battle-area">
+    <div class="battle-col"><div class="bc-title">▎你</div><div class="hp-bar"><div class="hp-fill" id="ab-pHpBar"></div></div><div class="hp-text" id="ab-pHp"></div><div class="bs" id="ab-pStats"></div></div>
+    <div class="battle-col"><div class="bc-title">▎怪物</div><div class="hp-bar"><div class="hp-fill" id="ab-mHpBar"></div></div><div class="hp-text" id="ab-mHp"></div><div class="bs" id="ab-mStats"></div></div>
+  </div>
+  <div style="text-align:center;font-size:13px;color:var(--paper-dim);margin:6px 0" id="ab-res"></div>
+  <div class="combat-log" id="ab-log"></div>
+  <div class="action-row">
+    <button class="btn sm dim" id="ab-prev">上一层</button>
+    <button class="btn sm dim" id="ab-next">下一层</button>
+    <button class="btn sm" onclick="jumpFloor()">跳转楼层</button>
+    <button class="btn sm" onclick="goldToCult()">灵石换修为</button>
+  </div>
+</div>
+<div class="page" id="page-shop">
+  <div class="realm-display" style="font-size:20px">万 宝 阁</div>
+  <div style="text-align:center;font-size:14px;color:var(--paper-dim);margin-bottom:12px" id="sp-info"></div>
+  <div class="shop-tabs"><button class="shop-tab active" onclick="switchShopTab('jing')">藏经阁</button><button class="shop-tab" onclick="switchShopTab('bing')">藏兵阁</button><button class="shop-tab" onclick="switchShopTab('ex')">兑换</button></div>
+  <div id="sp-jing"></div><div id="sp-bing" style="display:none"></div><div id="sp-ex" style="display:none"></div>
+</div>
+<div class="page" id="page-equip">
+  <div class="realm-display" style="font-size:20px">装 备 管 理</div>
+  <div style="text-align:center;font-size:13px;color:var(--paper-dim);margin-bottom:10px" id="eq-info"></div>
+  <div class="equip-tabs"><button class="equip-tab active" onclick="switchEquipTab('tech')">功法</button><button class="equip-tab" onclick="switchEquipTab('art')">法宝</button><button class="equip-tab" onclick="switchEquipTab('enh')">炼化</button><button class="equip-tab" onclick="switchEquipTab('title')">称号</button><button class="equip-tab" onclick="switchEquipTab('fuse')">融合</button></div>
+  <div id="eq-tech"></div><div id="eq-art" style="display:none"></div><div id="eq-enh" style="display:none"></div><div id="eq-title" style="display:none"></div><div id="eq-fuse" style="display:none"></div>
+</div>
+<div class="page" id="page-rebirth">
+  <div class="realm-display" style="font-size:20px">转 世 轮 回</div>
+  <div class="info-card"><div class="ic-title">轮回预览</div><div class="ic-text" id="rb-preview"></div></div>
+  <div class="info-card"><div class="ic-title" style="color:rgba(196,90,60,0.5)">⚠ 轮回将清除</div><div class="ic-text" style="color:rgba(196,90,60,0.3)">境界、修为、灵石、所有未装备的功法</div></div>
+  <button class="btn danger" id="rb-btn" onclick="doReincarnation()">确 认 轮 回</button>
+</div>
+<div class="page" id="page-menu">
+  <div class="realm-display" style="font-size:20px">菜 单</div>
+  <div class="menu-list">
+    <button class="btn" onclick="showGuide()">游 戏 说 明</button>
+    <button class="btn" onclick="openSaveDialog('save')">保 存 存 档</button>
+    <button class="btn" onclick="openSaveDialog('load')">读 取 存 档</button>
+    <button class="btn danger" onclick="backToStart()">返回开始界面</button>
+  </div>
+</div>
+<div class="page" id="page-debug">
+  <div class="realm-display" style="font-size:20px;color:var(--gold)">开发者调试</div>
+  <div class="section"><div class="section-title">资源</div><div style="font-size:14px;line-height:2">
+    修为：<input id="db-cult" type="number" style="width:120px" step="1000"> <button class="btn sm" onclick="dbSet('cult')">设 置</button><br>
+    灵石：<input id="db-gold" type="number" style="width:120px" step="1000"> <button class="btn sm" onclick="dbSet('gold')">设 置</button><br>
+    轮回点：<input id="db-rp" type="number" style="width:120px" step="100"> <button class="btn sm" onclick="dbSet('rp')">设 置</button><br>
+    轮回次数：<input id="db-rc" type="number" style="width:120px"> <button class="btn sm" onclick="dbSet('rc')">设 置</button><br>
+    境界：<select id="db-realm"></select> <button class="btn sm" onclick="dbSet('realm')">设 置</button><br>
+    炼魔渊层数：<input id="db-floor" type="number" style="width:80px"> <button class="btn sm" onclick="dbSet('floor')">设 置</button>
+  </div></div>
+  <div class="section"><div class="section-title">材料</div><div id="db-mats" style="font-size:14px;line-height:2"></div></div>
+  <div class="section"><div class="section-title">法宝（赋予强化等级）</div><div id="db-arts" style="font-size:14px;line-height:2"></div></div>
+  <div class="section"><div class="section-title">功法（赋予等级）</div><div id="db-techs" style="font-size:14px;line-height:2"></div></div>
+  <div class="section"><div class="section-title">称号</div><div id="db-titles" style="font-size:14px;line-height:2"></div></div>
+</div>
+</div>
+
+<div class="overlay" id="ov-guide"><div class="dialog"><div class="dialog-title">游戏说明</div><div style="font-size:15px;color:var(--paper-dim);line-height:2">1. 装备功法自动修炼获取修为<br>2. 修为达标点「突破」进阶<br>3. 筑基境·筑元解锁炼魔渊打怪得灵石<br>4. 灵石达标解锁万宝阁买功法法宝<br>5. 化丹境解锁转世轮回<br>6. 轮回点可抽取称号、刷新商店</div><button class="btn sm" onclick="closeD('guide')" style="margin-top:14px">关 闭</button></div></div>
+<div class="overlay" id="ov-save"><div class="dialog"><div class="dialog-title" id="save-title">存档</div><div id="save-slots"></div><button class="btn sm" onclick="closeD('save')" style="margin-top:10px">关 闭</button></div></div>
+<div class="overlay" id="ov-offline"><div class="dialog" style="text-align:center" id="offline-msg"></div></div>
+<div id="toast-area"></div>
+
+<script>
+var $=function(id){return document.getElementById(id);};
+function toast(msg){var t=document.createElement('div');t.className='toast';t.textContent=msg;$('toast-area').appendChild(t);setTimeout(function(){t.remove();},2100);}
+
+var C={
+  realms:[
+    {name:'筑基境',stages:['锻体','筑元','开脉'],reincRate:0.5,atk:5,def:3,hp:20},
+    {name:'明气境',stages:['气海初化','唤云召霞','天霖降顶'],reincRate:0.6,atk:10,def:5,hp:40},
+    {name:'玄光境',stages:['灵明初照','耀夜如昼','灵明彻照'],reincRate:0.7,atk:15,def:8,hp:60},
+    {name:'化丹境',stages:['丹煞初凝','丹力破壳','凝丹化印'],reincRate:0.8,atk:20,def:12,hp:90},
+    {name:'元婴境',stages:['元婴罡云','三花聚顶','元婴法身'],reincRate:1.0,atk:25,def:16,hp:130},
+    {name:'象相境',stages:['显阳灵身','初辟洞天','蕴化元胎'],reincRate:1.2,atk:30,def:20,hp:180},
+    {name:'凡蜕境',stages:['神意千年','斩古存今','渡觉半仙','永寿唯一'],reincRate:1.5,atk:35,def:25,hp:240},
+    {name:'真阳境',stages:['诛相合一','永续真阳','化实为虚'],reincRate:2.0,atk:40,def:30,hp:320},
+    {name:'炼神境',stages:['开天辟地','解真诸有','道衍大德'],reincRate:3.0,atk:50,def:38,hp:420},
+    {name:'至人境',stages:['争道','御道','衍道'],reincRate:5.0,atk:60,def:48,hp:550}
+  ],
+  cultReqs:[[5,15,30],[150,200,250],[10000,30000,80000],[200000,500000,1200000],[3000000,8000000,20000000],[50000000,120000000,300000000],[800000000,2000000000,5000000000,12000000000],[30000000000,70000000000,160000000000],[400000000000,1000000000000,3000000000000],[8000000000000,20000000000000,50000000000000]],
+  breakMats:['凝气丹','明心玉','玄光露','化丹砂','九转还魂草','象相天晶','蜕凡仙露','真阳神火','炼神星核'],
+  matFloors:[3,10,25,55,120,250,500,1000,2000],
+  techs:[
+    {tier:1,name:'吐纳术',rate:1},{tier:1,name:'纳气术',rate:2},{tier:1,name:'采灵术',rate:1.8},{tier:1,name:'凝神诀',rate:2.2},{tier:1,name:'坐忘经',rate:1.5},
+    {tier:2,name:'一气清经',rate:5},{tier:2,name:'两仪玄功',rate:6},{tier:2,name:'三花聚气',rate:4.5},{tier:2,name:'四象归元',rate:7},{tier:2,name:'五行通玄',rate:5.5},
+    {tier:3,name:'澜云密册',rate:20},{tier:3,name:'沧溟心经',rate:18},{tier:3,name:'紫霄宝箓',rate:22},{tier:3,name:'玉虚真解',rate:25},{tier:3,name:'天罡正法',rate:16},
+    {tier:4,name:'太乙金书',rate:80},{tier:4,name:'混元道典',rate:90},{tier:4,name:'太极玄鉴',rate:70},{tier:4,name:'无极天书',rate:100},{tier:4,name:'鸿蒙秘卷',rate:85},
+    {tier:5,name:'清源真法',rate:350},{tier:5,name:'灵枢素问',rate:300},{tier:5,name:'洞玄灵宝',rate:400},{tier:5,name:'上清大洞',rate:320},{tier:5,name:'黄庭内景',rate:380},
+    {tier:6,name:'玄元内参妙录',rate:1200},{tier:6,name:'北斗延生真经',rate:1400},{tier:6,name:'南华真经注疏',rate:1000},{tier:6,name:'冲虚至德真经',rate:1600},{tier:6,name:'通玄真经秘义',rate:1300},
+    {tier:7,name:'度厄得道宝录',rate:5000},{tier:7,name:'文昌帝君阴骘文',rate:5500},{tier:7,name:'太上感应灵篇',rate:4500},{tier:7,name:'关圣帝君觉世经',rate:6000},{tier:7,name:'吕祖全书奥义',rate:5200},
+    {tier:8,name:'九数太始灵宝玄明真经',rate:18000},{tier:8,name:'无上玉皇心印妙经',rate:20000},{tier:8,name:'高上玉皇本行集经',rate:16000},{tier:8,name:'太上老君说常清静经',rate:22000},{tier:8,name:'元始天尊说升天得道真经',rate:19000},
+    {tier:9,name:'混元一炁度人妙法',rate:60000},{tier:9,name:'三洞四辅十二类玄科',rate:55000},{tier:9,name:'紫微斗数延生保命秘箓',rate:65000},{tier:9,name:'九天应元雷声普化天尊玉枢宝经',rate:70000},{tier:9,name:'灵宝无量度人上品玄妙真经',rate:80000}
+  ],
+  techBonusTiers:[
+    {atk:1.5,def:1,hp:1,crit:0,cdmg:0,dodge:0},
+    {atk:2,def:1.5,hp:1,crit:0,cdmg:0,dodge:0},
+    {atk:3,def:2,hp:2,crit:0,cdmg:0,dodge:0},
+    {atk:5,def:3,hp:3,crit:3,cdmg:0,dodge:0},
+    {atk:10,def:6,hp:6,crit:0,cdmg:10,dodge:0},
+    {atk:20,def:12,hp:1,crit:8,cdmg:20,dodge:0},
+    {atk:50,def:30,hp:1,crit:12,cdmg:35,dodge:8},
+    {atk:150,def:80,hp:1,crit:18,cdmg:55,dodge:14},
+    {atk:500,def:250,hp:1,crit:25,cdmg:80,dodge:22}
+  ],
+  artifacts:[
+    {id:'a1',name:'青锋剑',atk:10,def:0,hp:0,crit:0,cdmg:0,dodge:0,cost:200,r:1,type:'灵石'},{id:'a2',name:'紫电剑',atk:18,def:0,hp:0,crit:3,cdmg:0,dodge:0,cost:600,r:2,type:'灵石'},{id:'a3',name:'寒霜刃',atk:12,def:0,hp:0,crit:0,cdmg:0,dodge:0,cost:200,r:1,type:'灵石'},{id:'a4',name:'烈阳刀',atk:25,def:0,hp:0,crit:-5,cdmg:30,dodge:0,cost:1800,r:3,type:'灵石'},{id:'a5',name:'破军戟',atk:35,def:0,hp:0,crit:0,cdmg:0,dodge:0,cost:10000,r:5,type:'灵石'},
+    {id:'a6',name:'玄铁甲',atk:0,def:15,hp:10,crit:0,cdmg:0,dodge:0,cost:600,r:2,type:'灵石'},{id:'a7',name:'金丝软甲',atk:0,def:12,hp:8,crit:0,cdmg:0,dodge:5,cost:1800,r:3,type:'灵石'},{id:'a8',name:'玄武重铠',atk:0,def:30,hp:25,crit:0,cdmg:0,dodge:-5,cost:4000,r:4,type:'灵石'},{id:'a9',name:'麒麟战袍',atk:0,def:20,hp:20,crit:3,cdmg:0,dodge:0,cost:4000,r:4,type:'灵石'},{id:'a10',name:'不灭金身',atk:0,def:38,hp:35,crit:0,cdmg:0,dodge:0,cost:10000,r:5,type:'灵石'},
+    {id:'a11',name:'灵风靴',atk:5,def:0,hp:0,crit:0,cdmg:0,dodge:10,cost:200,r:1,type:'灵石'},{id:'a12',name:'追云履',atk:8,def:0,hp:0,crit:0,cdmg:0,dodge:15,cost:600,r:2,type:'灵石'},{id:'a13',name:'踏雪无痕',atk:3,def:0,hp:0,crit:0,cdmg:0,dodge:20,cost:1800,r:3,type:'灵石'},{id:'a14',name:'凌波微步',atk:10,def:0,hp:0,crit:0,cdmg:0,dodge:12,cost:4000,r:4,type:'灵石'},{id:'a15',name:'缩地成寸',atk:18,def:0,hp:0,crit:0,cdmg:0,dodge:6,cost:10000,r:5,type:'灵石'},
+    {id:'a16',name:'护心镜',atk:0,def:8,hp:25,crit:0,cdmg:0,dodge:0,cost:600,r:2,type:'灵石'},{id:'a17',name:'乾坤袋',atk:5,def:5,hp:10,crit:0,cdmg:0,dodge:0,cost:1800,r:3,type:'灵石'},{id:'a18',name:'定魂珠',atk:0,def:5,hp:15,crit:0,cdmg:0,dodge:10,cost:1800,r:3,type:'灵石'},{id:'a19',name:'破妄镜',atk:0,def:2,hp:5,crit:10,cdmg:25,dodge:0,cost:4000,r:4,type:'灵石'},{id:'a20',name:'万灵符',atk:12,def:12,hp:18,crit:0,cdmg:0,dodge:0,cost:10000,r:5,type:'灵石'},
+    {id:'s1',name:'庚金破阵戟',atk:80,def:0,hp:0,crit:0,cdmg:0,dodge:0,mat:'庚金',matCount:50,cost:30000,r:6,type:'五行',special:'叠伤'},{id:'s2',name:'息土不灭盾',atk:0,def:60,hp:50,crit:0,cdmg:0,dodge:0,mat:'息土',matCount:50,cost:30000,r:6,type:'五行',special:'回血15%'},{id:'s3',name:'溟水寒冰剑',atk:50,def:0,hp:0,crit:0,cdmg:0,dodge:0,mat:'溟水',matCount:50,cost:30000,r:6,type:'五行',special:'20%冻结'},{id:'s4',name:'若木长生印',atk:10,def:15,hp:60,crit:0,cdmg:0,dodge:0,mat:'若木',matCount:50,cost:30000,r:6,type:'五行',special:'回血3%/回'},{id:'s5',name:'离火焚天炉',atk:100,def:0,hp:0,crit:0,cdmg:0,dodge:0,mat:'离火',matCount:50,cost:30000,r:6,type:'五行',special:'灼烧15%'}
+  ],
+  titles:[
+    {name:'废柴本废',desc:'无加成',r:1,eff:function(s){}},
+    {name:'卷王之王',desc:'修炼+8%',r:2,eff:function(s){s.rateMul*=1.08;}},
+    {name:'灵石收割机',desc:'灵石+15%',r:2,eff:function(s){s.goldMul*=1.15;}},
+    {name:'秃头强者',desc:'攻击+12%',r:2,eff:function(s){s.atkMul*=1.12;}},
+    {name:'摸鱼仙人',desc:'修-8% 掉落+25%',r:2,eff:function(s){s.rateMul*=0.92;s.goldMul*=1.25;s.xpMul*=1.25;}},
+    {name:'氪不改命',desc:'万宝阁-12%',r:2,eff:function(s){s.shopDisc*=0.88;}},
+    {name:'肝帝在世',desc:'修为掉落+20%',r:2,eff:function(s){s.xpMul*=1.20;}},
+    {name:'侥幸渡劫',desc:'防御+18%',r:2,eff:function(s){s.defMul*=1.18;}},
+    {name:'欧皇附体',desc:'暴击+10%',r:3,eff:function(s){s.critBonus+=10;}},
+    {name:'非酋本酋',desc:'暴伤+50%',r:3,eff:function(s){s.cdmgBonus+=50;}},
+    {name:'躺平宗师',desc:'修-12% 防+30%',r:3,eff:function(s){s.rateMul*=0.88;s.defMul*=1.30;}},
+    {name:'钞能力者',desc:'灵石+30%',r:3,eff:function(s){s.goldMul*=1.30;}},
+    {name:'社恐散修',desc:'修炼+15%',r:3,eff:function(s){s.rateMul*=1.15;}},
+    {name:'天天摆烂',desc:'修-10% 掉落+20%',r:3,eff:function(s){s.rateMul*=0.9;s.goldMul*=1.2;s.xpMul*=1.2;}},
+    {name:'御剑老司机',desc:'闪避+12%',r:3,eff:function(s){s.dodgeBonus+=12;}},
+    {name:'真·就这',desc:'攻+20% 防-15%',r:4,eff:function(s){s.atkMul*=1.2;s.defMul*=0.85;}},
+    {name:'无敌是多么寂寞',desc:'全属性+12%',r:4,eff:function(s){s.rateMul*=1.12;s.atkMul*=1.12;s.defMul*=1.12;s.goldMul*=1.12;}},
+    {name:'修仙公务员',desc:'修+10% 灵石+10%',r:4,eff:function(s){s.rateMul*=1.10;s.goldMul*=1.10;}},
+    {name:'凯丽之友',desc:'炼化+10% 防碎',r:5,eff:function(s){s.enhBonus+=10;s.noDestroy=true;}},
+    {name:'天道之子',desc:'全属性+20%',r:5,eff:function(s){s.rateMul*=1.2;s.atkMul*=1.2;s.defMul*=1.2;s.goldMul*=1.2;}},
+    {name:'问道至尊',desc:'全属性+35%',r:6,eff:function(s){s.rateMul*=1.35;s.atkMul*=1.35;s.defMul*=1.35;s.goldMul*=1.35;}}
+  ]
+};
+
+var GS={
+  name:'无名',realm:{major:0,minor:0},cultivation:0,gold:0,reincPoints:0,reincCount:0,
+  equippedTechs:[],equippedArts:[],ownedTechs:{},ownedArts:[],artEnhance:{},ownedTitles:[],equippedTitle:-1,
+  techUpgradeCount:0,jingPool:[],bingPool:[],treasures:{},gameStarted:false,currentPage:'cultivation',
+  fusedTechs:{},fusedNextId:0,fusionCount:0
+};
+
+var AB={active:false,floor:1,killsThisFloor:0,player:{},monster:{},log:[],defeated:false};
+
+function getTech(i){return C.techs[i];}
+function getArt(i){return C.artifacts[i];}
+function isFused(id){return typeof id==='string'&&id[0]==='f';}
+function getFusedTech(id){return GS.fusedTechs[id];}
+function techTier(id){if(!isFused(id)){var t=C.techs[id];return t?t.tier:0;}var ft=getFusedTech(id);return ft?ft.tier:0;}
+function isFuseIdxValid(id){
+  if(!isFused(id))return !!(C.techs[id]&&GS.ownedTechs[id]&&GS.ownedTechs[id]>=10);
+  return !!GS.fusedTechs[id];
+}
+function fmt(n){
+  if(n<1e4)return Math.floor(n).toString();
+  var u=['','万','亿','兆','京','垓','秭','穰','沟','涧','正','载'],i=0;
+  while(n>=1e4&&i<u.length-1){n/=1e4;i++;}
+  return Math.round(n)+u[i];
+}
+
+function getEnhMult(enh){
+  if(isNaN(enh)||!isFinite(enh)||enh<0)enh=0;
+  if(enh<=7)return 1+enh*0.05;
+  if(enh<=10)return 1.35+(enh-7)*0.12;
+  if(enh<=13)return 1.71+(enh-10)*0.25;
+  if(enh===14)return 2.46;
+  return 2.46*2; // +15 = ×2 of +14
+}
+
+function getArtDesc(a,enh){
+  var em=getEnhMult(enh),p=[];
+  if(a.atk)p.push('攻+'+Math.floor(a.atk*em)+'%');
+  if(a.def)p.push('防+'+Math.floor(a.def*em)+'%');
+  if(a.hp)p.push('HP+'+Math.floor(a.hp*em)+'%');
+  if(a.crit>0)p.push('暴+'+Math.floor(a.crit*em)+'%');
+  if(a.cdmg>0)p.push('暴伤+'+Math.floor(a.cdmg*em)+'%');
+  if(a.dodge>0)p.push('闪+'+Math.floor(a.dodge*em)+'%');
+  if(a.special)p.push(a.special);return p.join(' ');
+}
+
+function getTechBonus(techIdx){
+  var t=getTech(techIdx),lv=GS.ownedTechs[techIdx]||1;if(lv<10)return null;
+  var b=C.techBonusTiers[t.tier-1];
+  return {atk:b.atk,def:b.def,hp:b.hp,crit:b.crit,cdmg:b.cdmg,dodge:b.dodge};
+}
+
+function getTechBonusDescForSingle(id){
+  if(isFused(id)){var ft=getFusedTech(id);if(!ft)return'';var p=[];
+    if(ft.atkMul>1)p.push('攻×'+fmt(Math.round(ft.atkMul)));
+    if(ft.defMul>1)p.push('防×'+fmt(Math.round(ft.defMul)));
+    if(ft.hpMul>1)p.push('血×'+fmt(Math.round(ft.hpMul)));
+    if(ft.crit>0)p.push('暴+'+fmt(ft.crit)+'%');
+    if(ft.cdmg>0)p.push('倍+'+fmt(ft.cdmg)+'%');
+    if(ft.dodge>0)p.push('闪+'+fmt(ft.dodge)+'%');
+    return p.join(' ');}
+  var b=getTechBonus(id);if(!b)return '';
+  var p=[];
+  if(b.atk>1)p.push('攻×'+b.atk);
+  if(b.def>1)p.push('防×'+b.def);
+  if(b.hp>1)p.push('血×'+b.hp);
+  if(b.crit>0)p.push('暴+'+b.crit+'%');
+  if(b.cdmg>0)p.push('倍+'+b.cdmg+'%');
+  if(b.dodge>0)p.push('闪+'+b.dodge+'%');
+  return p.join(' ');
+}
+
+function getPlayerStats(){
+  var r=C.realms[GS.realm.major],s={rateMul:1,atkMul:1,defMul:1,goldMul:1,xpMul:1,shopDisc:1,critBonus:0,cdmgBonus:0,dodgeBonus:0,enhBonus:0,noDestroy:false};
+  if(GS.equippedTitle>=0&&GS.equippedTitle<C.titles.length)C.titles[GS.equippedTitle].eff(s);
+  var atkMul=1,defMul=1,hpMul=1,crit=3,cdmg=0,dodge=3;
+  // artifacts: percentage bonuses
+  for(var i=0;i<GS.equippedArts.length;i++){
+    var a=getArt(GS.equippedArts[i]),enh=GS.artEnhance[GS.equippedArts[i]]||0,em=getEnhMult(enh);
+    atkMul*=(1+(a.atk||0)/100*em);defMul*=(1+(a.def||0)/100*em);hpMul*=(1+(a.hp||0)/100*em);
+    if(a.crit)crit+=a.crit*em;if(a.cdmg)cdmg+=a.cdmg*em;if(a.dodge)dodge+=a.dodge*em;
+  }
+  // tech bonuses
+  for(var i=0;i<GS.equippedTechs.length;i++){
+    var id=GS.equippedTechs[i];if(!isFused(id)){var b=getTechBonus(id);if(!b)continue;
+    atkMul*=b.atk;defMul*=b.def;hpMul*=b.hp;crit+=b.crit||0;cdmg+=b.cdmg||0;dodge+=b.dodge||0;}
+    else{var ft=getFusedTech(id);if(!ft)continue;
+    atkMul*=ft.atkMul;defMul*=ft.defMul;hpMul*=ft.hpMul;crit+=ft.crit||0;cdmg+=ft.cdmg||0;dodge+=ft.dodge||0;}
+  }
+  var atk=Math.floor(r.atk*atkMul*s.atkMul),def=Math.floor(r.def*defMul*s.defMul),hp=Math.floor(r.hp*hpMul);
+  function ok(n,d){return isNaN(n)?d:n;}
+  return {atk:ok(atk,0),def:ok(def,0),hp:ok(hp,1),maxHp:ok(hp,1),crit:ok(Math.min(crit+s.critBonus,100),0),cdmg:ok(200+cdmg+s.cdmgBonus,200),dodge:ok(Math.min(dodge+s.dodgeBonus,70),0),rateMul:ok(s.rateMul,1),goldMul:ok(s.goldMul,1),xpMul:ok(s.xpMul,1),shopDisc:ok(s.shopDisc,1),enhBonus:ok(s.enhBonus,0),noDestroy:s.noDestroy||false};
+}
+
+function getTechRate(){var r=0;for(var i=0;i<GS.equippedTechs.length;i++){var id=GS.equippedTechs[i];if(isFused(id)){var ft=getFusedTech(id);if(ft)r+=ft.rate;}else{var t=C.techs[id];if(t)r+=t.rate/10*(GS.ownedTechs[id]||1);}}var m=r*getPlayerStats().rateMul;return isNaN(m)?0:m;}
+
+function navTo(name){
+  document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});
+  var nb=document.querySelector('.nav-btn[data-page="'+name+'"]');if(nb)nb.classList.add('active');
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  var pg=$('page-'+name);if(pg)pg.classList.add('active');GS.currentPage=name;
+  if(name==='abyss')initAbyss();if(name==='shop')updateShop();if(name==='equip')updateEquip();
+  if(name==='rebirth')updateRebirth();if(name==='cultivation')updateCultUI();if(name==='debug')initDebugPage();
+}
+document.querySelectorAll('.nav-btn').forEach(function(b){b.addEventListener('click',function(){navTo(this.getAttribute('data-page'));});});
+function closeD(name){$('ov-'+name).classList.remove('show');}
+document.querySelectorAll('.overlay').forEach(function(o){if(o.id!=='ov-story')o.addEventListener('click',function(e){if(e.target===o)o.classList.remove('show');});});
+function showGuide(){$('ov-guide').classList.add('show');}
+
+function updateCultUI(){
+  var r=C.realms[GS.realm.major],reqs=C.cultReqs[GS.realm.major],req=reqs?reqs[GS.realm.minor]:Infinity,prog=req>0?(GS.cultivation/req)*100:100,s=getPlayerStats();
+  $('cu-name').textContent='姓名：'+GS.name;
+  $('cu-gold').innerHTML='灵石：<span style="font-family:var(--font-num);color:var(--gold)">'+fmt(GS.gold)+'</span>';
+  $('cu-title').textContent='称号：'+(GS.equippedTitle>=0?C.titles[GS.equippedTitle].name:'无');
+  $('cu-pts').innerHTML='轮回点：<span style="font-family:var(--font-num);color:var(--ink)">'+GS.reincPoints+'</span>';
+  $('cu-realm').innerHTML=r.name+'<div class="stage">'+r.stages[GS.realm.minor]+'</div>';
+  $('cu-progress-text').textContent=fmt(GS.cultivation)+' / '+fmt(req);
+  $('cu-bar').style.width=Math.min(prog,100)+'%';$('cu-rate').textContent=fmt(Math.round(getTechRate()));
+  var ba=$('cu-break-area'),isBot=GS.realm.minor>=r.stages.length-1,mat=C.breakMats[GS.realm.major],has=GS.treasures&&GS.treasures[mat];
+  if(GS.cultivation>=req){if(isBot&&!has&&GS.realm.major<C.realms.length-1)ba.innerHTML='<button class="btn sm dim">需要 '+mat+'</button>';else ba.innerHTML='<button class="btn sm" onclick="doBreakthrough()">突 破</button>';}else ba.innerHTML='';
+  var w=$('cu-warn');if(isBot&&GS.realm.major<C.realms.length-1){var fl=C.matFloors[GS.realm.major];w.style.display='block';w.textContent=has?'✓ 已持有 '+mat:'⚠ 需突破材料：'+mat+'（炼魔渊第'+fl+'层起掉落）';}else w.style.display='none';
+  $('cu-stats').innerHTML='<div class="sg"><span class="sl">攻击</span><span class="sv">'+fmt(s.atk)+'</span></div><div class="sg"><span class="sl">防御</span><span class="sv">'+fmt(s.def)+'</span></div><div class="sg"><span class="sl">血量</span><span class="sv">'+fmt(s.hp)+'</span></div><div class="sg"><span class="sl">暴击率</span><span class="sv">'+s.crit+'%</span></div><div class="sg"><span class="sl">暴击倍率</span><span class="sv">'+fmt(s.cdmg)+'%</span></div><div class="sg"><span class="sl">闪避率</span><span class="sv">'+s.dodge+'%</span></div>';
+  var th='';var tc=['var(--paper)','#8a8','#68c','#a6e','#da8','#e84','#c55','#c80','#e5b'],tn=['壹','贰','叁','肆','伍','陆','柒','捌','玖'];for(var i=0;i<GS.equippedTechs.length;i++){var id=GS.equippedTechs[i],isF=isFused(id),tName,ttier,lv,br;if(isF){var ft=getFusedTech(id);if(!ft)continue;tName=ft.name;ttier=ft.tier;lv=10;br=ft.rate/10;}else{var t=getTech(id);if(!t)continue;tName=t.name;ttier=t.tier;lv=GS.ownedTechs[id]||1;br=t.rate/10;}var c=isF?'#8B008B':(tc[ttier-1]||'var(--paper)'),n=isF?'融':(tn[ttier-1]||'?'),bd=lv>=10?getTechBonusDescForSingle(id):'';th+='<div class="equip-row"><span class="en" style="color:'+c+'">【'+n+'·'+tName+'】</span> Lv.'+lv+'<span class="ev" style="font-size:'+(bd?'12px':'')+'">'+fmt(Math.round(br*lv*s.rateMul))+'/秒'+(bd?' <span style="font-size:11px;color:var(--gold)">'+bd+'</span>':'')+'</span></div>';}for(var i=GS.equippedTechs.length;i<3;i++)th+='<div class="equip-row"><span class="es empty">空槽位</span></div>';$('cu-techs').innerHTML=th;
+  var ah='';for(var i=0;i<GS.equippedArts.length;i++){var a=getArt(GS.equippedArts[i]),enh=GS.artEnhance[GS.equippedArts[i]]||0,en=enh>0?' +'+enh:'',ac=artColor(a);ah+='<div class="equip-row"><span class="en" style="color:'+ac+'">'+a.name+en+'</span><span class="ev">'+getArtDesc(a,enh)+'</span></div>';}for(var i=GS.equippedArts.length;i<3;i++)ah+='<div class="equip-row"><span class="es empty">空槽位</span></div>';$('cu-arts').innerHTML=ah;
+}
+
+function attemptMajorBreak(){if(GS.realm.major>=C.realms.length-1){toast('已达至人境巅峰');return;}var mat=C.breakMats[GS.realm.major];if(!GS.treasures||!GS.treasures[mat]){toast('需要 '+mat);return;}GS.treasures[mat]--;if(GS.treasures[mat]<=0)delete GS.treasures[mat];GS.realm.major++;GS.realm.minor=0;var conv=convOldMats();toast('大境界突破！'+C.realms[GS.realm.major].name+(conv>0?' (过时材料转 '+conv+' 灵石)':''));}
+function doBreakthrough(){var r=C.realms[GS.realm.major],reqs=C.cultReqs[GS.realm.major],req=reqs?reqs[GS.realm.minor]:Infinity;if(GS.cultivation<req)return;GS.cultivation-=req;if(GS.realm.minor<r.stages.length-1){GS.realm.minor++;toast('突破！'+r.stages[GS.realm.minor]);}else{attemptMajorBreak();}updateCultUI();}
+
+function initAbyss(){
+  if(GS.realm.major===0&&GS.realm.minor<1){toast('需达到筑基境·筑元');navTo('cultivation');return;}
+  var s=getPlayerStats();AB.player.hp=Math.min(AB.player.hp||s.hp,s.hp);AB.player.maxHp=s.hp;AB.player.atk=s.atk;AB.player.def=s.def;AB.player.crit=s.crit;AB.player.cdmg=s.cdmg;AB.player.dodge=s.dodge;
+  if(!AB.active){AB.floor=1;AB.killsThisFloor=0;AB.log=[];AB.defeated=false;AB.player.hp=s.hp;spawnMonster();AB.active=true;autoBattle();}
+  updateAbyssUI();
+}
+function spawnMonster(){var N=AB.floor;AB.monster.maxHp=Math.max(3,Math.floor(Math.pow(N,3)/2));AB.monster.hp=AB.monster.maxHp;AB.monster.atk=Math.floor(N*N/16+2);AB.monster.def=Math.floor(N*N/128+1);AB.monster.crit=Math.min(3*Math.floor(N/50),25);AB.monster.dodge=N<120?0:Math.min(3*Math.floor(N/100),20);AB.defeated=false;}
+function autoBattle(){
+  if(!AB.active||AB.defeated)return;var p=AB.player,m=AB.monster,l=AB.log;
+  if(Math.random()*100<m.dodge)l.push('<div class="cl-dodge">▶ 怪物闪避了你的攻击！</div>');
+  else{var ic=Math.random()*100<p.crit,d=Math.max(1,p.atk-m.def)*(ic?p.cdmg/100:1);m.hp-=Math.floor(d);l.push((ic?'<div class="cl-crit">▶ 暴击！':'<div class="cl-hit">▶ 你的攻击 →')+' 造成 '+Math.floor(d)+' 伤害</div>');if(m.hp<=0){m.hp=0;l.push('<div class="cl-dead">▶ 怪物被击败！</div>');onMonsterKill();AB.defeated=true;}}
+  if(!AB.defeated){if(Math.random()*100<p.dodge)l.push('<div class="cl-dodge">▶ 你闪避了怪物的攻击！</div>');else{var mc2=Math.random()*100<m.crit,md=Math.max(1,m.atk-p.def)*(mc2?2:1);p.hp-=Math.floor(md);l.push((mc2?'<div class="cl-crit">▶ 怪物暴击！':'<div class="cl-hit">▶ 怪物攻击 →')+' 造成 '+Math.floor(md)+' 点伤害</div>');if(p.hp<=0){p.hp=p.maxHp;AB.monster.hp=AB.monster.maxHp;l.push('<div class="cl-dead">▶ 你被击败了！原地复活，怪物恢复满血</div>');}}}
+  while(l.length>30)l.shift();updateAbyssUI();
+  if(!AB.defeated)setTimeout(autoBattle,800);else if(m.hp<=0)setTimeout(function(){AB.killsThisFloor++;spawnMonster();var s=getPlayerStats();AB.player.maxHp=s.hp;AB.player.atk=s.atk;AB.player.def=s.def;AB.player.crit=s.crit;AB.player.cdmg=s.cdmg;AB.player.dodge=s.dodge;autoBattle();},1000);
+}
+function onMonsterKill(){var N=AB.floor,gold=Math.floor(N*3+N*N/10*getPlayerStats().goldMul);if(isNaN(gold))gold=0;GS.gold+=gold;AB.player.hp=Math.min(AB.player.maxHp,AB.player.hp+Math.floor(AB.player.maxHp*.25));AB.log.push('<div class="cl-reward">▶ 获得灵石 +'+fmt(gold)+'</div>');if(N>=C.matFloors[GS.realm.major]&&Math.random()<.12){var mat=C.breakMats[GS.realm.major];GS.treasures[mat]=(GS.treasures[mat]||0)+1;AB.log.push('<div class="cl-reward">▶ ★ 获得 '+mat+'！</div>');}updateCultUI();}
+function convOldMats(){var sum=0;for(var i=0;i<GS.realm.major;i++){var m=C.breakMats[i];if(GS.treasures&&GS.treasures[m]){sum+=GS.treasures[m];delete GS.treasures[m];}}if(sum>0){GS.gold+=sum;toast('过时材料转为 '+sum+' 灵石');}return sum;}
+function jumpFloor(){var n=parseInt(prompt('跳转到哪一层？（当前第 '+AB.floor+' 层）',AB.floor));if(isNaN(n)||n<1){toast('请输入有效层数');return;}AB.floor=n;AB.killsThisFloor=0;AB.player.hp=AB.player.maxHp;convOldMats();spawnMonster();autoBattle();updateAbyssUI();}
+function goldToCult(){if(GS.gold<1000){toast('需要1000灵石');return;}GS.gold-=1000;var g=Math.floor(Math.random()*9999)+1;GS.cultivation+=g;toast('灵石炼化！获得 '+g+' 修为');updateCultUI();}
+function updateAbyssUI(){
+  $('ab-title').innerHTML='炼 魔 渊 · <span style="color:#DC143C">'+AB.floor+'</span> 层';
+  $('ab-floor').textContent='已击败 '+AB.killsThisFloor+' 次';var p=AB.player,m=AB.monster;
+  $('ab-pHpBar').style.width=Math.max(0,p.hp/p.maxHp*100)+'%';$('ab-pHp').textContent=fmt(p.hp)+' / '+fmt(p.maxHp);$('ab-pStats').innerHTML='攻'+fmt(p.atk)+' 防'+fmt(p.def)+'<br>暴'+p.crit+'% 闪'+p.dodge+'%';
+  $('ab-mHpBar').style.width=Math.max(0,m.hp/m.maxHp*100)+'%';$('ab-mHp').textContent=fmt(m.hp)+' / '+fmt(m.maxHp);$('ab-mStats').innerHTML='攻'+fmt(m.atk)+' 防'+fmt(m.def)+'<br>暴'+m.crit+'% 闪'+m.dodge+'%';
+  $('ab-log').innerHTML=AB.log.join('');$('ab-log').scrollTop=$('ab-log').scrollHeight;
+  var nb=$('ab-next');if(AB.killsThisFloor>=1){nb.className='btn sm';nb.onclick=function(){AB.floor++;AB.killsThisFloor=0;AB.player.hp=AB.player.maxHp;convOldMats();spawnMonster();autoBattle();updateAbyssUI();};}else{nb.className='btn sm dim';nb.onclick=null;}
+  var pb=$('ab-prev');if(AB.floor>1){pb.className='btn sm';pb.onclick=function(){AB.floor--;AB.killsThisFloor=0;AB.player.hp=AB.player.maxHp;convOldMats();spawnMonster();autoBattle();updateAbyssUI();};}else{pb.className='btn sm dim';pb.onclick=null;}
+  // resource line
+  var tr='';for(var k in GS.treasures)if(GS.treasures[k])tr+=k+'×'+GS.treasures[k]+' ';
+  $('ab-res').innerHTML='灵石：<span style="color:var(--gold)">'+fmt(GS.gold)+'</span>'+(tr?' · '+tr:'');
+}
+
+function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t;}}
+function weightedSample(arr,weights,count){
+  var result=[],pool=arr.slice();for(var c=0;c<count&&pool.length>0;c++){
+    var total=0;for(var i=0;i<pool.length;i++)total+=weights[arr.indexOf(pool[i])]||1;
+    var r=Math.random()*total,sum=0,pi=-1;
+    for(var i=0;i<pool.length;i++){sum+=weights[arr.indexOf(pool[i])]||1;if(r<=sum){pi=i;break;}}
+    if(pi>=0){result.push(pool[pi]);pool.splice(pi,1);}
+  }return result;
+}
+function initShopPools(){
+  if(GS.jingPool.length===0){var maxT=Math.min(GS.reincCount+1,9),pool=[];for(var i=1;i<C.techs.length;i++){if(C.techs[i].tier<=maxT)pool.push(i);else if(C.techs[i].tier===maxT+1&&Math.random()<0.02)pool.push(i);}shuffle(pool);GS.jingPool=pool.slice(0,Math.min(5,pool.length));}
+  if(GS.bingPool.length===0){var w=[10,5,3,2,1,0.5];var aw=[];for(var i=0;i<C.artifacts.length;i++)aw.push(w[C.artifacts[i].r-1]||1);var cp=weightedSample(C.artifacts,aw,6);GS.bingPool=cp.map(function(a){return C.artifacts.indexOf(a);});}
+}
+function updateShop(){initShopPools();var mn=['庚金','息土','溟水','若木','离火'],ms='';for(var i=0;i<mn.length;i++){var v=GS.treasures[mn[i]]||0;if(v>0)ms+=mn[i]+' '+v+' ';}$('sp-info').innerHTML='灵石：<span style="color:var(--gold)">'+fmt(GS.gold)+'</span> · 轮回点：<span style="color:var(--ink)">'+GS.reincPoints+'</span>'+(ms?'<br>五行材料：<span style="color:var(--gold)">'+ms+'</span>':'');renderJing();renderBing();}
+function renderEx(){
+  var h='<div class="section"><div class="section-title">灵石兑换</div>';
+  h+='<div class="shop-item"><span class="si-name">庚金</span><span class="si-info">100万灵石</span><span class="si-cost" onclick="buyMat(\'庚金\',1000000,0)">购买</span></div>';
+  h+='<div class="shop-item"><span class="si-name">息土</span><span class="si-info">100万灵石</span><span class="si-cost" onclick="buyMat(\'息土\',1000000,0)">购买</span></div>';
+  h+='<div class="shop-item"><span class="si-name">溟水</span><span class="si-info">150万灵石</span><span class="si-cost" onclick="buyMat(\'溟水\',1500000,0)">购买</span></div>';
+  h+='<div class="shop-item"><span class="si-name">若木</span><span class="si-info">200万灵石</span><span class="si-cost" onclick="buyMat(\'若木\',2000000,0)">购买</span></div>';
+  h+='<div class="shop-item"><span class="si-name">离火</span><span class="si-info">300万灵石</span><span class="si-cost" onclick="buyMat(\'离火\',3000000,0)">购买</span></div>';
+  h+='<div class="section"><div class="section-title" style="margin-top:12px">轮回点兑换</div>';
+  h+='<div class="shop-item"><span class="si-name">庚金</span><span class="si-info">5轮回点</span><span class="si-cost" onclick="buyMat(\'庚金\',0,5)">购买</span></div>';
+  h+='<div class="shop-item"><span class="si-name">息土</span><span class="si-info">5轮回点</span><span class="si-cost" onclick="buyMat(\'息土\',0,5)">购买</span></div>';
+  h+='<div class="shop-item"><span class="si-name">溟水</span><span class="si-info">8轮回点</span><span class="si-cost" onclick="buyMat(\'溟水\',0,8)">购买</span></div>';
+  h+='<div class="shop-item"><span class="si-name">若木</span><span class="si-info">10轮回点</span><span class="si-cost" onclick="buyMat(\'若木\',0,10)">购买</span></div>';
+  h+='<div class="shop-item"><span class="si-name">离火</span><span class="si-info">15轮回点</span><span class="si-cost" onclick="buyMat(\'离火\',0,15)">购买</span></div>';
+  h+='</div>';$('sp-ex').innerHTML=h;
+}
+function buyMat(mat,goldCost,rpCost){
+  if(goldCost>0&&GS.gold<goldCost){toast('灵石不足');return;}
+  if(rpCost>0&&GS.reincPoints<rpCost){toast('轮回点不足');return;}
+  if(goldCost>0)GS.gold-=goldCost;if(rpCost>0)GS.reincPoints-=rpCost;
+  GS.treasures[mat]=(GS.treasures[mat]||0)+1;toast('获得 '+mat+' ×1');updateCultUI();updateShop();
+}
+function renderJing(){
+  var h='',s=getPlayerStats();var tc=['var(--paper)','#8a8','#68c','#a6e','#da8','#e84','#c55','#c80','#e5b'],tn=['壹','贰','叁','肆','伍','陆','柒','捌','玖'];
+  for(var i=0;i<GS.jingPool.length;i++){var idx=GS.jingPool[i],t=getTech(idx),lv=GS.ownedTechs[idx]||0,br=t.rate/10,c=tc[t.tier-1]||'var(--paper)',n=tn[t.tier-1]||'?';
+    if(lv>0){h+='<div class="shop-item"><span class="si-name" style="color:'+c+'">【'+n+'·'+t.name+'】</span><span class="si-info">'+fmt(Math.round(br*lv*s.rateMul))+'/s</span><span class="si-cost" style="opacity:.3;pointer-events:none">已购买</span></div>';}
+    else{var buyC=t.tier*200;h+='<div class="shop-item"><span class="si-name" style="color:'+c+'">【'+n+'·'+t.name+'】</span><span class="si-info">'+(br>=10?fmt(Math.round(br)):br.toFixed(1))+'/s·级</span><span class="si-cost" onclick="buyTech('+idx+')">'+fmt(buyC)+'灵石</span></div>';}
+  }h+='<div class="refresh-btn"><button class="btn sm" onclick="refreshJing()">刷新藏经阁 5轮回点</button></div>';$('sp-jing').innerHTML=h;
+}
+function artColor(a){var tc=['var(--paper)','#8a8','#68c','#a6e','#da8','#e5b'];if(a.type==='五行')return'#c55';return tc[(a.r||1)-1]||tc[0];}
+
+function renderBing(){
+  var h='';for(var i=0;i<GS.bingPool.length;i++){var idx=GS.bingPool[i],a=getArt(idx),ow=GS.ownedArts.indexOf(idx)>=0,ac=artColor(a);
+    if(a.type==='灵石'){if(ow)h+='<div class="shop-item"><span class="si-name" style="color:'+ac+'">'+a.name+'</span><span class="si-info">'+getArtDesc(a,0)+'</span><span class="si-cost" style="opacity:.3;pointer-events:none">已拥有</span></div>';
+      else{var s=getPlayerStats(),cost=Math.floor(a.cost*(.3+Math.random()*.5)*s.shopDisc);h+='<div class="shop-item"><span class="si-name" style="color:'+ac+'">'+a.name+'</span><span class="si-info">'+getArtDesc(a,0)+'</span><span class="si-cost" onclick="buyArt('+idx+','+cost+')">'+cost+'灵石</span></div>';}}
+    else{if(ow)h+='<div class="shop-item"><span class="si-name" style="color:#c55">'+a.name+'</span><span class="si-info">'+a.special+'</span><span class="si-cost" style="opacity:.3;pointer-events:none">已拥有</span></div>';
+      else{var mat=a.mat,have=(GS.treasures&&GS.treasures[mat])||0;h+='<div class="shop-item"><span class="si-name" style="color:#c55">'+a.name+'</span><span class="si-info">'+a.special+'</span><span class="si-cost" style="color:var(--gold)" onclick="buySpecialArt('+idx+')">'+mat+'×'+a.matCount+' ('+have+')</span></div>';}}
+  }h+='<div class="refresh-btn"><button class="btn sm" onclick="refreshBing()">刷新藏兵阁 5轮回点</button></div>';$('sp-bing').innerHTML=h;
+}
+function buyTech(idx){var t=C.techs[idx],cost=t.tier*200;if(GS.gold<cost){toast('灵石不足');return;}GS.gold-=cost;GS.ownedTechs[idx]=1;GS.techUpgradeCount++;if(GS.equippedTechs.length<3)GS.equippedTechs.push(idx);toast('习得 '+t.name);updateShop();updateCultUI();}
+function buyTechLevel(idx){var lv=GS.ownedTechs[idx]||0;if(lv>=10){toast('已达满级');return;}var t=C.techs[idx],cost=t.tier===1?lv:Math.floor(lv*20*Math.pow(1.3,lv));if(GS.cultivation<cost){toast('修为不足');return;}GS.cultivation-=cost;GS.ownedTechs[idx]=lv+1;GS.techUpgradeCount++;toast(t.name+' 升至 Lv.'+(lv+1));updateShop();updateCultUI();}
+function buyArt(idx,cost){if(GS.ownedArts.indexOf(idx)>=0){toast('已拥有该法宝');return;}if(GS.gold<cost){toast('灵石不足');return;}GS.gold-=cost;GS.ownedArts.push(idx);toast('获得 '+C.artifacts[idx].name);updateShop();updateCultUI();}
+function buySpecialArt(idx){var a=C.artifacts[idx];if(GS.ownedArts.indexOf(idx)>=0){toast('已拥有该法宝');return;}var need=a.matCount,have=(GS.treasures&&GS.treasures[a.mat])||0;if(have<need){toast('材料不足');return;}GS.treasures[a.mat]-=need;GS.ownedArts.push(idx);toast('获得 '+a.name);updateShop();updateCultUI();}
+function refreshJing(){if(GS.reincPoints<5){toast('轮回点不足');return;}GS.reincPoints-=5;GS.jingPool=[];initShopPools();updateShop();}
+function refreshBing(){if(GS.reincPoints<5){toast('轮回点不足');return;}GS.reincPoints-=5;GS.bingPool=[];initShopPools();updateShop();}
+function switchShopTab(t){$('sp-jing').style.display=t==='jing'?'block':'none';$('sp-bing').style.display=t==='bing'?'block':'none';$('sp-ex').style.display=t==='ex'?'block':'none';var ts=document.querySelectorAll('#page-shop .shop-tab');ts[0].classList.toggle('active',t==='jing');ts[1].classList.toggle('active',t==='bing');ts[2].classList.toggle('active',t==='ex');if(t==='ex')renderEx();}
+
+function updateEquip(){var e=document.getElementById('eq-info');if(e)e.innerHTML='修为：<span style="color:var(--ink)">'+fmt(GS.cultivation)+'</span> · 灵石：<span style="color:var(--gold)">'+fmt(GS.gold)+'</span> · 轮回点：<span style="color:var(--ink)">'+GS.reincPoints+'</span>';renderEquipTech();renderEquipArt();renderEquipEnh();renderEquipTitle();renderEquipFuse();}
+var _fuseSelA=null,_fuseSelB=null;
+function renderEquipFuse(){
+  if(GS.realm.major<5){$('eq-fuse').innerHTML='<div class="section"><div style="text-align:center;color:var(--paper-dim);padding:20px">需达到象相境解锁功法融合</div></div>';return;}
+  var h='<div class="section"><div class="section-title">功法融合（本轮 '+GS.fusionCount+'/2 次）</div>';
+  // collect level-10 techs (regular and fused) grouped by tier
+  var pool=[];
+  for(var k in GS.ownedTechs){if(GS.ownedTechs.hasOwnProperty(k)&&GS.ownedTechs[k]>=10){var idx=parseInt(k),t=getTech(idx);pool.push({id:idx,tier:t.tier,name:t.name,rate:t.rate});}}
+  for(var fid in GS.fusedTechs){if(GS.fusedTechs.hasOwnProperty(fid)){var f=GS.fusedTechs[fid];pool.push({id:fid,tier:f.tier,name:f.name,rate:f.rate});}}
+  // validate current selections still exist
+  if(_fuseSelA!==null){var fa=false;for(var i=0;i<pool.length;i++){if(pool[i].id===_fuseSelA){fa=true;break;}}if(!fa)_fuseSelA=null;}
+  if(_fuseSelB!==null){var fb=false;for(var i=0;i<pool.length;i++){if(pool[i].id===_fuseSelB){fb=true;break;}}if(!fb)_fuseSelB=null;}
+  if(pool.length<2){h+='<div style="text-align:center;color:var(--paper-dim);padding:10px">需至少2本满级功法</div></div>';$('eq-fuse').innerHTML=h;return;}
+  // sort by tier
+  pool.sort(function(a,b){return a.tier-b.tier;});
+  var curTier=-1;
+  for(var i=0;i<pool.length;i++){
+    var p=pool[i];if(p.tier!==curTier){if(curTier>=0)h+='</div>';curTier=p.tier;var tn=['壹','贰','叁','肆','伍','陆','柒','捌','玖'];h+='<div style="margin-bottom:8px;font-size:14px;color:var(--paper-dim)">'+tn[curTier-1]+'品功法</div>';}
+    var isF=isFused(p.id),sel=(p.id===_fuseSelA||p.id===_fuseSelB);
+    h+='<div style="display:inline-block;border:1px solid '+(sel?'#c45a3c':'rgba(196,90,60,0.08)')+';border-radius:4px;padding:4px 10px;margin:2px 4px;cursor:pointer;font-size:13px;color:'+(isF?'#8B008B':'var(--paper)')+'" onclick="toggleFuseSel(\''+p.id+'\','+curTier+')">'+'【'+(isF?'融':tn[curTier-1])+'·'+p.name+'】'+(sel?' ✓':'')+'</div>';
+  }h+='</div>';
+  if(_fuseSelA!==null&&_fuseSelB!==null){
+    var cost=getFuseCost(),rate=getFuseRate(techTier(_fuseSelA));
+    h+='<div style="text-align:center;margin-top:10px;font-size:14px">成功率 <span style="color:'+(rate>=70?'#8a8':(rate>=50?'#da8':'#c55'))+'">'+rate+'%</span> · 费用 <span style="color:var(--ink)">'+cost+'</span> 轮回点</div>';
+    if(GS.fusionCount>=2)h+='<div style="text-align:center;color:rgba(196,90,60,0.5)">本轮融合次数已用完</div>';
+    else if(GS.reincPoints<cost)h+='<div style="text-align:center;color:rgba(196,90,60,0.5)">轮回点不足</div>';
+    else h+='<button class="btn sm" onclick="doFuse()">开始融合</button>';
+  }
+  h+='</div>';$('eq-fuse').innerHTML=h;
+}
+function getFuseCost(){return Math.floor((GS.reincPoints||0)*0.55);}
+function getFuseRate(tier){return tier<=1?90:tier<=2?80:tier<=3?70:tier<=4?65:tier<=5?60:tier<=8?55:10;}
+function toggleFuseSel(id,tier){
+  // normalize: numeric string → number
+  if(typeof id==='string'&&!isNaN(id)&&id[0]!=='f')id=parseInt(id);
+  if(_fuseSelA===id){_fuseSelA=null;updateEquip();return;}
+  if(_fuseSelB===id){_fuseSelB=null;updateEquip();return;}
+  if(_fuseSelA===null){_fuseSelA=id;}
+  else if(_fuseSelB===null&&techTier(_fuseSelA)===tier&&!(isFused(_fuseSelA)&&isFused(id))){_fuseSelB=id;}
+  else{_fuseSelA=id;_fuseSelB=null;}
+  updateEquip();
+}
+function doFuse(){
+  if(GS.fusionCount>=2){toast('本轮融合次数已用完');return;}
+  if(_fuseSelA===null||_fuseSelB===null)return;
+  if(!isFuseIdxValid(_fuseSelA)||!isFuseIdxValid(_fuseSelB)){_fuseSelA=_fuseSelB=null;toast('选择已失效，请重新选择');updateEquip();return;}
+  var tier=techTier(_fuseSelA),cost=getFuseCost(),rate=getFuseRate(tier);
+  if(GS.reincPoints<cost){toast('轮回点不足');return;}
+  GS.reincPoints-=cost;GS.fusionCount++;
+  if(Math.random()*100>=rate){_fuseSelA=_fuseSelB=null;toast('融合失败！');updateEquip();updateCultUI();return;}
+  var stA=getFuseStats(_fuseSelA),stB=getFuseStats(_fuseSelB);
+  var name=prompt('融合成功！请输入功法名称（留空则随机继承）：','');
+  if(!name||name.trim()==='')name=Math.random()<0.5?stA.name:stB.name;
+  var rAtk=stA.atkMul+stB.atkMul,rDef=stA.defMul+stB.defMul,rHp=stA.hpMul+stB.hpMul,rCrit=stA.crit+stB.crit,rCdmg=stA.cdmg+stB.cdmg,rDodge=stA.dodge+stB.dodge;
+  var bonuses=[];
+  if(stA.atkMul>1||stB.atkMul>1)bonuses.push({k:'atk',v:rAtk});
+  if(stA.defMul>1||stB.defMul>1)bonuses.push({k:'def',v:rDef});
+  if(stA.hpMul>1||stB.hpMul>1)bonuses.push({k:'hp',v:rHp});
+  if(stA.crit>0||stB.crit>0)bonuses.push({k:'crit',v:rCrit});
+  if(stA.cdmg>0||stB.cdmg>0)bonuses.push({k:'cdmg',v:rCdmg});
+  if(stA.dodge>0||stB.dodge>0)bonuses.push({k:'dodge',v:rDodge});
+  var removeK=null,boostK=null;
+  if(bonuses.length>2){var ri=Math.floor(Math.random()*bonuses.length);removeK=bonuses[ri].k;bonuses.splice(ri,1);var bi=Math.floor(Math.random()*bonuses.length);boostK=bonuses[bi].k;}
+  var mul=function(k){return k===boostK?0.6:0.51;};
+  var ft={name:name,tier:tier,rate:Math.floor((stA.rate+stB.rate)*1.5),
+    atkMul:removeK==='atk'?1:Math.floor(rAtk*mul('atk')),
+    defMul:removeK==='def'?1:Math.floor(rDef*mul('def')),
+    hpMul:removeK==='hp'?1:Math.floor(rHp*mul('hp')),
+    crit:removeK==='crit'?0:Math.floor(rCrit*mul('crit')),
+    cdmg:removeK==='cdmg'?0:Math.floor(rCdmg*mul('cdmg')),
+    dodge:removeK==='dodge'?0:Math.floor(rDodge*mul('dodge'))};
+  if(removeK)toast('融合：丢失了 '+removeK+' 属性'+((boostK&&boostK!==removeK)?'，但 '+boostK+' 增强了':''));
+  // delete sources
+  var srcA=_fuseSelA,srcB=_fuseSelB;
+  if(!isFused(srcA))delete GS.ownedTechs[srcA];else delete GS.fusedTechs[srcA];
+  if(!isFused(srcB))delete GS.ownedTechs[srcB];else delete GS.fusedTechs[srcB];
+  // add new fused tech with unique ID
+  var newId='f'+GS.fusedNextId;GS.fusedNextId++;
+  GS.fusedTechs[newId]=ft;
+  _fuseSelA=_fuseSelB=null;
+  // clean equippedTechs
+  GS.equippedTechs=GS.equippedTechs.filter(function(x){return x!==srcA&&x!==srcB&&(isFused(x)?!!GS.fusedTechs[x]:!!GS.ownedTechs[x]);});
+  toast('融合成功！获得 【融·'+ft.name+'】');
+  updateEquip();updateCultUI();
+}
+function getFuseStats(id){
+  if(!isFused(id)){var t=getTech(id),b=C.techBonusTiers[t.tier-1];return{name:t.name,rate:t.rate,atkMul:b.atk,defMul:b.def,hpMul:b.hp,crit:b.crit||0,cdmg:b.cdmg||0,dodge:b.dodge||0};}
+  var ft=getFusedTech(id);return{name:ft.name,rate:ft.rate,atkMul:ft.atkMul,defMul:ft.defMul,hpMul:ft.hpMul,crit:ft.crit||0,cdmg:ft.cdmg||0,dodge:ft.dodge||0};
+}
+function removeTechSource(idx){
+  if(idx>=0){delete GS.ownedTechs[idx];GS.equippedTechs=GS.equippedTechs.filter(function(x){return x!==idx;});}
+  else{GS.equippedTechs=GS.equippedTechs.filter(function(x){return x!==idx;});}
+}
+function equipTab(t){$('eq-tech').style.display=t==='tech'?'block':'none';$('eq-art').style.display=t==='art'?'block':'none';$('eq-enh').style.display=t==='enh'?'block':'none';$('eq-title').style.display=t==='title'?'block':'none';$('eq-fuse').style.display=t==='fuse'?'block':'none';var ts=document.querySelectorAll('#page-equip .equip-tab'),idx=t==='tech'?0:(t==='art'?1:(t==='enh'?2:(t==='title'?3:4)));for(var i=0;i<ts.length;i++)ts[i].classList.toggle('active',i===idx);}
+function switchEquipTab(t){equipTab(t);updateEquip();}
+
+function renderEquipTech(){
+  var h='<div class="section"><div class="section-title">已装备（'+GS.equippedTechs.length+'/3）</div>';
+  var tc2=['var(--paper)','#8a8','#68c','#a6e','#da8','#e84','#c55','#c80','#e5b'],tn2=['壹','贰','叁','肆','伍','陆','柒','捌','玖'];
+  for(var i=0;i<GS.equippedTechs.length;i++){var id=GS.equippedTechs[i],isF=isFused(id),tName,ttier,lv,br;if(isF){var ft=getFusedTech(id);if(!ft)continue;tName=ft.name;ttier=ft.tier;lv=10;br=ft.rate/10;}else{var t=getTech(id);if(!t)continue;tName=t.name;ttier=t.tier;lv=GS.ownedTechs[id]||1;br=t.rate/10;}var c=isF?'#8B008B':(tc2[ttier-1]||'var(--paper)'),n=isF?'融':(tn2[ttier-1]||'?'),upCost=ttier===1?lv:Math.floor(lv*20*Math.pow(1.3,lv));h+='<div class="equip-row"><span class="en" style="color:'+c+'">【'+n+'·'+tName+'】</span> Lv.'+lv+'<span class="ev">'+fmt(Math.round(br*lv))+'/s</span><span class="es act" onclick="unequipTech('+i+')">卸下</span>'+(lv<10&&!isF?' <span class="es act" onclick="eqUpTech('+id+')">修炼（'+fmt(upCost)+'）</span>':'')+'</div>';}
+  for(var i=GS.equippedTechs.length;i<3;i++)h+='<div class="equip-row"><span class="es empty">空槽位</span></div>';
+  h+='</div><div class="section"><div class="section-title">可装备</div>';var has=false;
+  for(var k in GS.ownedTechs){if(GS.ownedTechs.hasOwnProperty(k)&&GS.equippedTechs.indexOf(parseInt(k))<0){var idx=parseInt(k),t=getTech(idx),c=tc2[t.tier-1]||'var(--paper)',n=tn2[t.tier-1]||'?',lv=GS.ownedTechs[k]||1;h+='<div class="equip-row"><span class="en" style="color:'+c+'">【'+n+'·'+t.name+'】</span> Lv.'+lv+'<span class="es act" onclick="equipTech('+idx+')">装备</span> <span class="es act" onclick="sellTech('+idx+')" style="color:rgba(196,90,60,0.5)">卖出</span></div>';has=true;}}
+  for(var fid in GS.fusedTechs){if(GS.fusedTechs.hasOwnProperty(fid)&&GS.equippedTechs.indexOf(fid)<0){var f=GS.fusedTechs[fid];h+='<div class="equip-row"><span class="en" style="color:#8B008B">【融·'+f.name+'】</span><span class="ev">'+fmt(Math.round(f.rate))+'/s</span><span class="es act" onclick="equipTech(\''+fid+'\')">装备</span></div>';has=true;}}
+  if(!has)h+='<div class="equip-row"><span class="es empty">无可装备</span></div>';h+='</div>';$('eq-tech').innerHTML=h;
+}
+function renderEquipArt(){
+  var h='<div class="section"><div class="section-title">已装备（'+GS.equippedArts.length+'/3）</div>';
+  for(var i=0;i<GS.equippedArts.length;i++){var idx=GS.equippedArts[i],a=getArt(idx),enh=GS.artEnhance[idx]||0,en=enh>0?' +'+enh:'',ac=artColor(a);h+='<div class="equip-row"><span class="en" style="color:'+ac+'">'+a.name+en+'</span><span class="ev">'+getArtDesc(a,enh)+'</span><span class="es act" onclick="unequipArt('+i+')">卸下</span></div>';}
+  for(var i=GS.equippedArts.length;i<3;i++)h+='<div class="equip-row"><span class="es empty">空槽位</span></div>';
+  h+='</div><div class="section"><div class="section-title">可装备</div>';var has=false;
+  for(var i=0;i<GS.ownedArts.length;i++){var idx=GS.ownedArts[i];if(GS.equippedArts.indexOf(idx)<0){var a=getArt(idx),ac=artColor(a);h+='<div class="equip-row"><span class="en" style="color:'+ac+'">'+a.name+'</span><span class="ev">'+getArtDesc(a,0)+'</span><span class="es act" onclick="equipArt('+idx+')">装备</span> <span class="es act" onclick="sellArt('+idx+')" style="color:rgba(196,90,60,0.5)">卖出</span></div>';has=true;}}
+  if(!has)h+='<div class="equip-row"><span class="es empty">无可装备</span></div>';h+='</div>';$('eq-art').innerHTML=h;
+}
+function renderEquipEnh(){
+  var h='<div class="section"><div class="section-title">法宝炼化</div>';
+  if(GS.equippedArts.length===0){h+='<div style="text-align:center;color:var(--paper-dim);padding:10px">没有装备法宝</div></div>';$('eq-enh').innerHTML=h;return;}
+  for(var i=0;i<GS.equippedArts.length;i++){var idx=GS.equippedArts[i],a=getArt(idx),enh=GS.artEnhance[idx]||0,en=enh>0?' +'+enh:'',s=getPlayerStats();var rate=enh<9?95-enh*5:(50-(enh-9)*5)+s.enhBonus;rate=Math.min(rate,95);var cost=Math.floor((a.cost||100)*(enh+1)*5);var is5=a.type==='五行',matNeed=is5?Math.floor((enh+1)*3):0,matStr=is5?(' + '+a.mat+'×'+matNeed):'';
+    h+='<div style="border:1px solid rgba(196,90,60,0.08);border-radius:4px;padding:8px 12px;margin-bottom:6px"><div style="display:flex;justify-content:space-between;align-items:center"><span>'+a.name+en+'</span><span style="font-size:13px;color:var(--paper-dim)">率 '+rate+'% 费 '+fmt(cost)+'灵石'+matStr+'</span><button class="btn sm" onclick="doEnhance('+idx+')" style="font-size:13px">炼化</button></div><div style="font-size:12px;color:var(--paper-dim);margin-top:2px">失败：'+(enh>=14?(s.noDestroy?'退回+10':'粉碎'):('退回+'+Math.max(0,enh-3)))+'</div></div>';}
+  h+='</div>';$('eq-enh').innerHTML=h;
+}
+function doEnhance(idx){var enh=GS.artEnhance[idx]||0,s=getPlayerStats(),rate=enh<9?95-enh*5:(50-(enh-9)*5)+s.enhBonus;rate=Math.min(rate,95),a=getArt(idx),cost=Math.floor((a.cost||100)*(enh+1)*5);if(GS.gold<cost){toast('灵石不足');return;}if(a.type==='五行'){var matNeed=Math.floor((enh+1)*3),have=GS.treasures[a.mat]||0;if(have<matNeed){toast('需要 '+a.mat+'×'+matNeed+'（当前'+have+'）');return;}GS.treasures[a.mat]-=matNeed;if(GS.treasures[a.mat]<=0)delete GS.treasures[a.mat];}GS.gold-=cost;if(Math.random()*100<rate){GS.artEnhance[idx]=enh+1;toast(a.name+' 炼化成功！+'+(enh+1));}else{if(enh>=14){if(s.noDestroy){GS.artEnhance[idx]=10;toast('炼化失败！凯丽之友保护，退回+10');}else{GS.equippedArts.splice(GS.equippedArts.indexOf(idx),1);GS.ownedArts.splice(GS.ownedArts.indexOf(idx),1);toast('炼化失败！'+a.name+' 粉碎了！');}}else{GS.artEnhance[idx]=Math.max(0,enh-3);toast('炼化失败！退回+'+(Math.max(0,enh-3)));}}updateEquip();updateCultUI();}
+function renderEquipTitle(){
+  var ttc=['var(--paper)','#8a8','#68c','#a6e','#da8','#c55'];
+  var h='<div class="section"><div class="section-title">当前装备：'+(GS.equippedTitle>=0?C.titles[GS.equippedTitle].name:'无')+'</div>';
+  if(GS.equippedTitle>=0){var ct=C.titles[GS.equippedTitle];h+='<div class="equip-row"><span class="en" style="color:'+(ttc[ct.r-1]||ttc[0])+'">● '+ct.name+'</span><span class="ev">'+ct.desc+'</span><span class="es act" onclick="unequipTitle()">卸下</span></div>';}
+  h+='<div style="font-size:13px;color:var(--paper-dim);text-align:center;padding:6px">─ 已拥有 ─</div>';
+  for(var i=0;i<GS.ownedTitles.length;i++){if(i===GS.equippedTitle)continue;var t=C.titles[GS.ownedTitles[i]];h+='<div class="equip-row"><span class="en" style="color:'+(ttc[t.r-1]||ttc[0])+'">○ '+t.name+'</span><span class="ev">'+t.desc+'</span><span class="es act" onclick="equipTitle('+i+')">装备</span></div>';}
+  h+='</div><div style="text-align:center;margin-top:10px"><button class="btn sm" onclick="drawTitle()">抽取称号 1轮回点</button></div>';$('eq-title').innerHTML=h;
+}
+function unequipTech(i){GS.equippedTechs.splice(i,1);updateEquip();updateCultUI();}
+function eqUpTech(idx){var lv=GS.ownedTechs[idx]||0,t=C.techs[idx];if(lv>=10){toast('已达满级');return;}var cost=t.tier===1?lv:Math.floor(lv*20*Math.pow(1.3,lv));if(GS.cultivation<cost){toast('修为不足');return;}GS.cultivation-=cost;GS.ownedTechs[idx]=lv+1;GS.techUpgradeCount++;toast(t.name+' 升至 Lv.'+(lv+1));updateEquip();updateCultUI();}
+function sellTech(idx){var r=Math.random();if(r<0.5){GS.cultivation+=100;toast('卖出！获得 100 修为点');}else{GS.gold+=100;toast('卖出！获得 100 灵石');}delete GS.ownedTechs[idx];GS.equippedTechs=GS.equippedTechs.filter(function(x){return x!==idx;});updateEquip();updateCultUI();}
+function sellArt(idx){GS.ownedArts.splice(GS.ownedArts.indexOf(idx),1);GS.equippedArts=GS.equippedArts.filter(function(x){return x!==idx;});var r=Math.random();if(r<0.5){GS.cultivation+=100;toast('卖出！获得 100 修为点');}else{GS.gold+=100;toast('卖出！获得 100 灵石');}updateEquip();updateCultUI();}
+function equipTech(idx){if(GS.equippedTechs.length>=3){toast('功法槽已满');return;}GS.equippedTechs.push(idx);updateEquip();updateCultUI();}
+function unequipArt(i){GS.equippedArts.splice(i,1);updateEquip();updateCultUI();}
+function equipArt(idx){if(GS.equippedArts.length>=3){toast('法宝槽已满');return;}GS.equippedArts.push(idx);updateEquip();updateCultUI();}
+function unequipTitle(){GS.equippedTitle=-1;updateEquip();updateCultUI();}
+function equipTitle(i){GS.equippedTitle=GS.ownedTitles[i];updateEquip();updateCultUI();}
+function drawTitle(){if(GS.reincPoints<1){toast('轮回点不足');return;}GS.reincPoints-=1;var r=Math.random();if(r<0.10){var pool=[];for(var i=0;i<C.titles.length;i++){if(GS.ownedTitles.indexOf(i)<0)pool.push(i);}if(pool.length===0){toast('已集齐所有称号');return;}var pick=pool[Math.floor(Math.random()*pool.length)];GS.ownedTitles.push(pick);toast('获得称号：'+C.titles[pick].name);}else if(r<0.60){GS.cultivation+=800;toast('获得 800 修为点');}else if(r<0.82){GS.gold+=800;toast('获得 800 灵石');}else{var mn=['庚金','息土','溟水','若木','离火'];for(var j=0;j<10;j++){var m=mn[Math.floor(Math.random()*5)];GS.treasures[m]=(GS.treasures[m]||0)+1;}toast('获得 五行素材 ×10');}updateEquip();updateCultUI();}
+
+function calcRebirth(){var rs=GS.realm.major,xs=Math.floor(Math.sqrt(Math.max(0,GS.cultivation))/25),gs=Math.floor(Math.sqrt(Math.max(0,GS.gold))/25);var tl=0,tt=0;for(var i=0;i<GS.equippedTechs.length;i++){var id=GS.equippedTechs[i];if(!isFused(id)){tl+=GS.ownedTechs[id]||1;tt+=C.techs[id].tier;}else{tl+=10;var ft=getFusedTech(id);tt+=ft?ft.tier:0;}}var ts=Math.round((tl+tt)/9),tot=Math.min(rs+xs+gs+ts,80);if(isNaN(tot))tot=0;var ma=Math.floor((rs||0)/6+(xs||0)/3+(gs||0)/3);return{tot:tot,ma:ma,rs:rs,xs:xs,gs:gs,ts:ts};}
+function updateRebirth(){var r=calcRebirth();$('rb-preview').innerHTML='境界分：'+r.rs+'<br>修为分：'+r.xs+'<br>灵石分：'+r.gs+'<br>功法分：'+r.ts+'<br>——<br>本次轮回点：<span style="color:var(--ink);font-size:22px">'+r.tot+'</span><br>五行材料：<span style="color:var(--gold);font-size:18px">'+r.ma+' 份</span>';}
+function doReincarnation(){if(GS.realm.major<2){toast('需达到玄光境才能轮回');return;}var r=calcRebirth();GS.reincPoints=(GS.reincPoints||0)+r.tot;GS.reincCount++;var mn=['庚金','息土','溟水','若木','离火'];for(var i=0;i<r.ma;i++){var m=mn[Math.floor(Math.random()*5)];GS.treasures[m]=(GS.treasures[m]||0)+1;}GS.realm={major:0,minor:0};GS.cultivation=0;GS.gold=0;var kept=GS.equippedTechs.slice();GS.ownedTechs={};GS.equippedTechs=[];GS.techUpgradeCount=0;for(var i=0;i<kept.length&&GS.equippedTechs.length<3;i++){var kId=kept[i];if(!isFused(kId)){GS.ownedTechs[kId]=1;GS.equippedTechs.push(kId);}else if(GS.fusedTechs[kId]){GS.equippedTechs.push(kId);}}GS.jingPool=[];GS.bingPool=[];GS.fusionCount=0;toast('轮回完成！获得 '+r.tot+' 轮回点，'+r.ma+' 份材料');navTo('cultivation');updateCultUI();}
+
+function buildSave(){return{name:GS.name,realm:GS.realm,cultivation:GS.cultivation,gold:GS.gold,reincPoints:GS.reincPoints,reincCount:GS.reincCount,equippedTechs:GS.equippedTechs,equippedArts:GS.equippedArts,ownedTechs:GS.ownedTechs,ownedArts:GS.ownedArts,artEnhance:GS.artEnhance,ownedTitles:GS.ownedTitles,equippedTitle:GS.equippedTitle,techUpgradeCount:GS.techUpgradeCount,treasures:GS.treasures,fusedTechs:GS.fusedTechs,fusedNextId:GS.fusedNextId,fusionCount:GS.fusionCount,saveTime:Date.now()};}
+function applySave(d){GS.name=d.name||'无名';GS.realm=d.realm||{major:0,minor:0};GS.cultivation=d.cultivation||0;GS.gold=d.gold||0;GS.reincPoints=d.reincPoints||0;GS.reincCount=d.reincCount||0;GS.equippedTechs=d.equippedTechs||[];GS.equippedArts=d.equippedArts||[];GS.ownedTechs=d.ownedTechs||{};GS.ownedArts=d.ownedArts||[];GS.artEnhance=d.artEnhance||{};GS.ownedTitles=d.ownedTitles||[];GS.equippedTitle=d.equippedTitle!==undefined?d.equippedTitle:-1;GS.techUpgradeCount=d.techUpgradeCount||0;GS.treasures=d.treasures||{};GS.fusedTechs=d.fusedTechs||{};GS.fusedNextId=d.fusedNextId||0;GS.fusionCount=d.fusionCount||0;}
+function deleteSaves(){for(var i=0;i<3;i++)try{localStorage.removeItem('wcds_slot_'+i);}catch(e){}toast('存档已删除');}
+
+var _saveMode='load';
+function openSaveDialog(mode){_saveMode=mode;$('save-title').textContent=mode==='save'?'保存存档':'读取存档';var h='';for(var i=0;i<3;i++){var key='wcds_slot_'+i,raw=null;try{raw=localStorage.getItem(key);}catch(e){}if(raw){try{var d=JSON.parse(raw);h+='<div class="save-slot" onclick="onSlot('+i+',true)"><div class="sl-name">存档 '+(i+1)+'</div><div class="sl-info">'+d.name+' · '+(C.realms[d.realm.major]?C.realms[d.realm.major].name:'?')+' · 灵石 '+fmt(d.gold)+' · 轮回 '+d.reincCount+'次<br>'+new Date(d.saveTime).toLocaleString()+'</div></div>';}catch(e){h+='<div class="save-slot" onclick="onSlot('+i+',true)"><div class="sl-name">存档 '+(i+1)+'</div><div class="sl-empty">(损坏)</div></div>';}}else{h+='<div class="save-slot" onclick="onSlot('+i+',false)"><div class="sl-name">存档 '+(i+1)+'</div><div class="sl-empty">— 空 —</div></div>';}}$('save-slots').innerHTML=h;$('ov-save').classList.add('show');}
+function onSlot(n,has){if(_saveMode==='save'){var d=buildSave();d.saveTime=Date.now();try{localStorage.setItem('wcds_slot_'+n,JSON.stringify(d));toast('已保存到 存档'+(n+1));}catch(e){toast('保存失败');}closeD('save');}else{if(!has){toast('该档位为空');return;}try{var r=localStorage.getItem('wcds_slot_'+n);if(!r){toast('读取失败');return;}applySave(JSON.parse(r));enterGameUI();closeD('save');toast('存档'+(n+1)+' 已加载');checkDebug();}catch(e){toast('读取失败');}}}
+
+function enterGameUI(){$('start-overlay').classList.add('hidden');$('main-nav').classList.add('show');$('page-wrap').classList.add('show');GS.gameStarted=true;GS.currentPage='cultivation';initShopPools();updateCultUI();navTo('cultivation');}
+function startGame(){GS.realm={major:0,minor:0};GS.cultivation=0;GS.gold=0;GS.reincPoints=0;GS.reincCount=0;GS.equippedTechs=[];GS.equippedArts=[];GS.ownedTechs={};GS.ownedArts=[];GS.artEnhance={};GS.ownedTitles=[];GS.equippedTitle=-1;GS.techUpgradeCount=0;GS.treasures={};GS.jingPool=[];GS.bingPool=[];GS.fusedTechs={};GS.fusedNextId=0;GS.fusionCount=0;AB.active=false;AB.log=[];GS.ownedTechs[0]=1;GS.equippedTechs.push(0);enterGameUI();}
+function backToStart(){$('start-overlay').classList.remove('hidden');$('main-nav').classList.remove('show');$('page-wrap').classList.remove('show');GS.gameStarted=false;}
+
+var _storyLines=['你跋山涉水，历经九死一生，<br>终于寻到了传说中的修仙宗门——<br>问道宗。','然而入门测试时，宗门长老面沉如水，<br>拂袖长叹：<br><br>"根骨驳杂，灵脉枯涩……<br>此等资质，莫说内门，<br>便是外门杂役也嫌多余。"','一卷薄薄的竹简被扔到你脚边。<br><br>"这本《吐纳术》拿去，自行修炼。<br>若有机缘，再来叩山门罢。"','你伫立原地，拳心紧攥。<br>长老的话语如冰锥刺骨，<br>却浇不灭你眼底那簇幽火。<br><br>你在心底暗暗发誓——<br><br>"我，<span id="story-name-slot">____</span>，终有一日，<br>要踏入那传说中的至人境界！"'];
+var _si=0;
+function startStory(){var o=$('ov-story');o.classList.add('show');_si=0;showNext();}
+function showNext(){if(_si>=_storyLines.length){$('ov-story').classList.remove('show');startGame();return;}var t=_storyLines[_si];$('story-text').innerHTML=t;if(_si===3){$('story-action').innerHTML='<input class="name-input" id="name-input" placeholder="输入姓名" maxlength="6"><br><br><button class="btn sm" onclick="confirmName()">确 定</button>';}else{$('story-action').innerHTML='<button class="btn sm" onclick="showNext()">继 续</button>';}_si++;}
+function confirmName(){var n=$('name-input').value||'无名';GS.name=n;$('story-name-slot').textContent=n;$('story-action').innerHTML='<button class="btn sm" onclick="showNext()">继 续</button>';checkDebug();}
+
+var IS_DEBUG=false;
+function checkDebug(){IS_DEBUG=(GS.name==='260509');$('nav-debug').style.display=IS_DEBUG?'':'none';}
+function initDebugPage(){
+  var s='';for(var i=0;i<C.realms.length;i++)s+='<option value="'+i+'">'+C.realms[i].name+'</option>';$('db-realm').innerHTML=s;
+  var mh='',mn=['庚金','息土','溟水','若木','离火'];for(var i=0;i<mn.length;i++)mh+=mn[i]+'：<input id="db-mat-'+i+'" type="number" style="width:60px" value="'+(GS.treasures[mn[i]]||0)+'"> ';$('db-mats').innerHTML=mh+'<br><button class="btn sm" onclick="dbSet(\'mats\')">全部设置</button>';
+  var ah='';for(var j=0;j<C.artifacts.length;j++){var a=C.artifacts[j],ow=GS.ownedArts.indexOf(j)>=0;ah+='<span style="color:'+(ow?'var(--paper)':'var(--paper-dim)')+'">'+a.name+'</span> 强化:<input id="db-ae-'+j+'" type="number" style="width:40px" value="'+(GS.artEnhance[j]||0)+'"> '+(!ow?'<button class="btn sm" onclick="dbAddArt('+j+')" style="font-size:11px">获得</button>':'');if((j+1)%3===0)ah+='<br>';}$('db-arts').innerHTML=ah+'<br><button class="btn sm" onclick="dbSet(\'arts\')">应用强化</button>';
+  var th='';for(var k=0;k<C.techs.length;k++){var t=C.techs[k],lv=GS.ownedTechs[k]||0;th+='<span style="color:'+(lv>0?'var(--paper)':'var(--paper-dim)')+'">'+t.name+'</span> Lv:<input id="db-tl-'+k+'" type="number" style="width:40px" value="'+lv+'"> ';if((k+1)%3===0)th+='<br>';}$('db-techs').innerHTML=th+'<br><button class="btn sm" onclick="dbSet(\'techs\')">应用</button>';
+  var tth='';for(var t=0;t<C.titles.length;t++){var has=GS.ownedTitles.indexOf(t)>=0;tth+='<span style="color:'+(has?'var(--paper)':'var(--paper-dim)')+'">'+C.titles[t].name+'</span> '+(has?'':'<button class="btn sm" onclick="dbAddTitle('+t+')" style="font-size:11px">获得</button>');if((t+1)%5===0)tth+='<br>';}$('db-titles').innerHTML=tth;
+}
+function dbSet(type){
+  if(type==='cult')GS.cultivation=parseInt($('db-cult').value)||0;else if(type==='gold')GS.gold=parseInt($('db-gold').value)||0;else if(type==='rp')GS.reincPoints=parseInt($('db-rp').value)||0;else if(type==='rc')GS.reincCount=parseInt($('db-rc').value)||0;
+  else if(type==='realm'){GS.realm.major=parseInt($('db-realm').value)||0;GS.realm.minor=0;}else if(type==='floor'){AB.floor=parseInt($('db-floor').value)||1;AB.killsThisFloor=0;if(AB.active)spawnMonster();}
+  else if(type==='mats'){var mn=['庚金','息土','溟水','若木','离火'];for(var i=0;i<mn.length;i++){var v=parseInt($('db-mat-'+i).value)||0;if(v)GS.treasures[mn[i]]=v;else delete GS.treasures[mn[i]];}}
+  else if(type==='arts'){for(var j=0;j<C.artifacts.length;j++){var v=parseInt($('db-ae-'+j).value)||0;if(v)GS.artEnhance[j]=v;else delete GS.artEnhance[j];}}
+  else if(type==='techs'){for(var k=0;k<C.techs.length;k++){var v=parseInt($('db-tl-'+k).value)||0;if(v){GS.ownedTechs[k]=v;if(GS.equippedTechs.indexOf(k)<0&&GS.equippedTechs.length<3)GS.equippedTechs.push(k);}else{delete GS.ownedTechs[k];var ei=GS.equippedTechs.indexOf(k);if(ei>=0)GS.equippedTechs.splice(ei,1);}}}
+  toast('设置完成');updateCultUI();}
+function dbAddArt(idx){if(GS.ownedArts.indexOf(idx)<0){GS.ownedArts.push(idx);toast('获得 '+C.artifacts[idx].name);initDebugPage();}}
+function dbAddTitle(idx){if(GS.ownedTitles.indexOf(idx)<0){GS.ownedTitles.push(idx);toast('获得 '+C.titles[idx].name);initDebugPage();}}
+
+var _lastTS=0,_cultAcc=0,_hiddenTS=0;
+function loop(ts){if(!_lastTS)_lastTS=ts;var dt=Math.min((ts-_lastTS)/1000,1);_lastTS=ts;if(GS.gameStarted){_cultAcc+=dt;if(_cultAcc>=1){_cultAcc-=1;var gtr=getTechRate();if(isNaN(gtr))gtr=0;if(isNaN(GS.cultivation))GS.cultivation=0;if(isNaN(GS.gold))GS.gold=0;GS.cultivation+=gtr;updateCultUI();}}requestAnimationFrame(loop);}
+requestAnimationFrame(loop);
+
+// ═══ 离线进度 ═══
+document.addEventListener('visibilitychange',function(){
+  if(!GS.gameStarted)return;
+  if(document.hidden){_hiddenTS=Date.now();}
+  else if(_hiddenTS>0){
+    var elapsed=Math.floor((Date.now()-_hiddenTS)/1000);
+    _hiddenTS=0;if(elapsed<5)return;
+    // cultivation
+    var gtr=getTechRate();if(isNaN(gtr))gtr=0;
+    var cultGain=Math.floor(gtr*elapsed);
+    // abyss simulation
+    var kills=0,goldGain=0;
+    if(AB.active){
+      var s=getPlayerStats(),N=AB.floor;
+      var mHp=Math.max(3,Math.floor(Math.pow(N,3)/2)),mDef=Math.floor(N*N/128+1);
+      var edpr=Math.max(1,s.atk-mDef)*(1-AB.monster.dodge/100)*(1+s.crit/100*s.cdmg/100);
+      if(isNaN(edpr))edpr=1;
+      var rtk=mHp/Math.max(edpr,0.01),kps=1/(rtk*0.8+1);
+      kills=Math.floor(kps*elapsed);if(isNaN(kills))kills=0;
+      goldGain=Math.floor(kills*(N*3+N*N/10*s.goldMul));
+    }
+    if(isNaN(cultGain))cultGain=0;if(isNaN(goldGain))goldGain=0;
+    GS.cultivation+=cultGain;GS.gold+=goldGain;
+    var mins=Math.floor(elapsed/60),secs=elapsed%60;
+    var timeStr=(mins>0?mins+'分':'')+secs+'秒';
+    var msg='<div style="font-size:20px;color:var(--ink);margin-bottom:12px">你离开了 '+timeStr+'</div>'
+      +'<div style="line-height:2;font-size:16px">'
+      +'修炼获得：<span style="color:var(--ink)">'+fmt(cultGain)+' 修为</span><br>'
+      +(kills>0?'击杀怪物：<span style="color:var(--ink)">'+kills+' 只</span><br>':'')
+      +(goldGain>0?'灵石获得：<span style="color:var(--gold)">'+fmt(goldGain)+'</span><br>':'')
+      +'</div><br><button class="btn sm" onclick="closeOffline()">确 认</button>';
+    $('offline-msg').innerHTML=msg;$('ov-offline').classList.add('show');
+    updateCultUI();if(AB.active)updateAbyssUI();
+  }
+});
+function closeOffline(){$('ov-offline').classList.remove('show');}
+</script>
+</body>
+</html>
